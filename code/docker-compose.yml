@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+  frontend:
+    build: ./
+    ports:
+      - "3000:3000"
+    depends_on:
+      - nlp-api
+
+  nlp-api:
+    build: ./py_analysis
+    ports:
+      - "5000:5000"
