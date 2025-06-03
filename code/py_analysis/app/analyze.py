@@ -13,7 +13,7 @@ load_dotenv()
 # API and configuration constants
 OLLAMA_URL = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "mixtral")
-CACHE_DIR = f"cache_{OLLAMA_MODEL}"
+CACHE_DIR = "cache_mistral"
 PROGRESS_PATH = "progress.json"
 
 # Ensure cache directory exists
