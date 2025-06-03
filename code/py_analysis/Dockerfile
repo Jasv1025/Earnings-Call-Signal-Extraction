@@ -1,25 +1,29 @@
-# Base image
+# Base Python image
 FROM python:3.10-slim
 
-# ---- Install Ollama dependencies ----
+# Install dependencies
 RUN apt-get update && \
     apt-get install -y curl unzip git && \
     rm -rf /var/lib/apt/lists/*
 
-# ---- Install Ollama ----
+# Install Ollama CLI
 RUN curl -fsSL https://ollama.com/install.sh | bash
 
-# ---- Install Python dependencies ----
+# Set working directory inside container
 WORKDIR /app
+
+# Copy Python dependencies first and install
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# ---- Copy the rest of the Python code ----
+# Copy all project files into container
 COPY . .
 
-# ---- Pull model so it's ready at startup ----
-RUN ollama pull mixtral
+# Ensure entrypoint is executable
+RUN chmod +x entrypoint.sh
 
-# ---- Run both Ollama and Flask ----
-# You can use a process manager to run both, like `bash -c`
-CMD bash -c "ollama serve & python server.py"
+# Expose Flask + Ollama ports
+EXPOSE 5000 11434
+
+# Entrypoint to run Ollama + Flask
+CMD ["./entrypoint.sh"]

@@ -1,2 +1,11 @@
 .env.local
+.env
 file structure
+__pycache__
+node_modules
+package-lock.json
+.pytest_cache
+tests
+progress.json
+old
+old2

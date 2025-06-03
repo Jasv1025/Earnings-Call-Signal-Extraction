@@ -1,13 +1,18 @@
-version: '3.8'
 services:
   frontend:
     build: ./
     ports:
       - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:5000  # Can also be http://backend:5000 for internal calls
     depends_on:
-      - nlp-api
+      - backend
 
-  nlp-api:
+  backend:
     build: ./py_analysis
     ports:
       - "5000:5000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - ./py_analysis:/app

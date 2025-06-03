@@ -1,22 +1,128 @@
-from flask import Flask, request, jsonify
-from app.analyze import analyze_with_ollama, analyze_with_openai
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+from app.analyze import analyze_labeled_sections, compare_tone, _cache_path
+from app.fool_scraper import scrape_transcript_from_url
+import json
+import time
 
 app = Flask(__name__)
+CORS(app, origins=["http://localhost:3000"])
 
-@app.route("/analyze", methods=["POST"])
-def analyze():
-    data = request.json
-    transcript = data.get("transcript", "")
-    provider = data.get("provider", "ollama").lower()
+TRANSCRIPT_URLS = [
+    "https://www.fool.com/earnings/call-transcripts/2025/02/26/nvidia-nvda-q4-2025-earnings-call-transcript/",
+    "https://www.fool.com/earnings/call-transcripts/2024/11/20/nvidia-nvda-q3-2025-earnings-call-transcript/",
+    "https://www.fool.com/earnings/call-transcripts/2024/08/28/nvidia-nvda-q2-2025-earnings-call-transcript/",
+    "https://www.fool.com/earnings/call-transcripts/2024/05/29/nvidia-nvda-q1-2025-earnings-call-transcript/",
+]
 
-    if provider == "ollama":
-        result = analyze_with_ollama(transcript)
-    elif provider == "openai":
-        result = analyze_with_openai(transcript)
-    else:
-        return jsonify({"error": "Invalid provider"}), 400
+def run_analyze_last_four(company="NVIDIA", provider="ollama"):
+    raw_transcripts = [scrape_transcript_from_url(url) for url in TRANSCRIPT_URLS]
+    results = []
+    for t in raw_transcripts:
+        quarter = t.get("quarter", "QX")
+        analysis = analyze_labeled_sections(
+            prepared=t.get("prepared_remarks", ""),
+            qa=t.get("qa_section", ""),
+            company=company,
+            quarter=quarter,
+            provider=provider
+        )
+        results.append({
+            "quarter": t["quarter"],
+            "date": t["date"],
+            "analysis": {
+                **analysis,
+                "result": {
+                    **analysis["result"],
+                    "transcript": t.get("transcript", "")
+                }
+            }
+        })
+    return results
 
-    return jsonify(result)
+def run_tone_shift(company="NVIDIA", provider="ollama"):
+    def parse_quarter(quarter_str):
+        q, year = quarter_str.upper().split()
+        return int(year), int(q[1])
+
+    scraped = [scrape_transcript_from_url(url) for url in TRANSCRIPT_URLS]
+    scraped = [s for s in scraped if s is not None]
+    scraped = sorted(scraped, key=lambda d: parse_quarter(d["quarter"]))
+    comparisons = []
+
+    for i in range(len(scraped) - 1):
+        q1 = scraped[i]["quarter"]
+        q2 = scraped[i + 1]["quarter"]
+
+        path1 = _cache_path("", company, q1, None, is_summary=1)
+        path2 = _cache_path("", company, q2, None, is_summary=1)
+
+        if not path1.exists() or not path2.exists():
+            print(f"[WARN] Missing summary cache for {q1} or {q2}, skipping...")
+            continue
+
+        with open(path1, "r", encoding="utf-8") as f1:
+            summary1 = json.load(f1)["content"]
+
+        with open(path2, "r", encoding="utf-8") as f2:
+            summary2 = json.load(f2)["content"]
+
+        result = compare_tone(summary1, summary2, company, q1, q2)
+
+        comparisons.append({
+            "from": q1,
+            "to": q2,
+            "result": result
+        })
+
+    return {
+        "company": company,
+        "signal": "tone_shift",
+        "comparisons": comparisons
+    }
+
+@app.route("/", methods=["GET"])
+def analyze_all():
+    print("[LOG] / route called")
+    company = request.args.get("company", "NVIDIA")
+    provider = request.args.get("provider", "ollama")
+    last_four = run_analyze_last_four(company, provider)
+    tone_shift = run_tone_shift(company, provider)
+    return jsonify({
+        "results": last_four,
+        "tone_shift": tone_shift
+    })
+
+@app.route("/analyze/last-four", methods=["GET"])
+def analyze_last_four():
+    print('[LOG] /analyze/last-four called')
+    company = request.args.get("company", "NVIDIA")
+    provider = request.args.get("provider", "ollama")
+    last_four = run_analyze_last_four(company, provider)
+    return jsonify({
+        "company": company,
+        "results": last_four
+    })
+
+@app.route("/analyze/tone-shift", methods=["GET"])
+def analyze_tone_shift():
+    company = request.args.get("company", "NVIDIA")
+    provider = request.args.get("provider", "ollama")
+    return jsonify(run_tone_shift(company, provider))
+
+@app.route("/progress", methods=["GET"])
+def progress():
+    try:
+        with open("progress.json", "r", encoding="utf-8") as f:
+            return jsonify(json.load(f))
+    except FileNotFoundError:
+        return jsonify({"status": "Starting up...", "timestamp": time.time()})
+    except Exception as e:
+        return jsonify({"status": f"Error: {str(e)}", "timestamp": time.time()})
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    from waitress import serve
+    print("[STARTUP] Waitress serving on port 5000...")
+    print("[STARTUP] Registered routes:")
+    print(app.url_map)
+    serve(app, host="0.0.0.0", port=5000)

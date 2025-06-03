@@ -1,0 +1,11 @@
+@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {@apply bg-white text-gray-900 font-sans leading-relaxed antialiased;}
+h1, h2, h3, h4, h5, h6 {@apply font-semibold text-gray-800;}
+a {@apply text-green-600 hover:underline;}
+input, textarea {@apply border border-gray-300 rounded px-3 py-2 w-full;}
+button {@apply px-4 py-2 font-medium rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50;}
+pre {@apply whitespace-pre-wrap bg-gray-100 p-4 rounded text-sm font-mono overflow-auto;}
