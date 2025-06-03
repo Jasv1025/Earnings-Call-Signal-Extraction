@@ -7,20 +7,25 @@ import requests
 from dotenv import load_dotenv
 from typing import List
 
+# Load environment variables from .env file
 load_dotenv()
 
+# API and configuration constants
 OLLAMA_URL = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "mixtral")
 CACHE_DIR = f"cache_{OLLAMA_MODEL}"
 PROGRESS_PATH = "progress.json"
 
+# Ensure cache directory exists
 os.makedirs(CACHE_DIR, exist_ok=True)
 
+# Write progress messages to disk for frontend polling
 def update_progress(message: str):
     with open(PROGRESS_PATH, "w", encoding="utf-8") as f:
         json.dump({"status": message, "timestamp": time.time()}, f)
         print(message)
 
+# Generate a safe cache path based on input parameters
 def _cache_path(prompt: str, company: str, quarter: str, section_index: int = None, is_summary: int = 0, custom_suffix: str = None) -> Path:
     sanitized_company = re.sub(r'\W+', '', company.lower())
     sanitized_quarter = re.sub(r'\W+', '', quarter.upper())
@@ -36,6 +41,7 @@ def _cache_path(prompt: str, company: str, quarter: str, section_index: int = No
 
     return Path(CACHE_DIR) / filename
 
+# Return cached result if available, otherwise call Ollama API
 def _cached_or_call(prompt: str, path: Path) -> str:
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
@@ -61,11 +67,13 @@ def _cached_or_call(prompt: str, path: Path) -> str:
 
     return content
 
+# Remove boilerplate ad segments and normalize spacing
 def preprocess_transcript(text: str) -> str:
     cleaned = re.sub(r"You're reading a free article.*?Learn More", "", text, flags=re.DOTALL)
     cleaned = re.sub(r"\n{2,}", "\n", cleaned).strip()
     return cleaned
 
+# Split large transcript text into manageable chunks
 def split_long_text(text: str, max_len: int = 4000, min_len: int = 0) -> list:
     if len(text) <= max_len:
         return [text.strip()]
@@ -86,6 +94,7 @@ def split_long_text(text: str, max_len: int = 4000, min_len: int = 0) -> list:
 
     return chunks
 
+# Analyze sentiment and strategy from labeled transcript sections
 def analyze_labeled_sections(prepared: str, qa: str, company: str = "NVIDIA", quarter: str = "QX", provider: str = "ollama") -> dict:
     update_progress("Preprocessing labeled sections")
 
@@ -111,7 +120,6 @@ def analyze_labeled_sections(prepared: str, qa: str, company: str = "NVIDIA", qu
             score_info = score_chunk_for_summary(chunk)
 
             update_progress(f"{label}: chunk {i + 1} of {len(chunks)}")
-            #print(f"[INFO] {label} chunk {i}: score={score_info['score']} ({score_info['tag']}) — {score_info['reason']}")
 
             if label == "management_sentiment":
                 prompt = f"""
@@ -191,6 +199,7 @@ def analyze_labeled_sections(prepared: str, qa: str, company: str = "NVIDIA", qu
 
     return final_analysis
 
+# Assign a score to a chunk based on relevance indicators
 def score_chunk_for_summary(chunk_text: str) -> dict:
     text = chunk_text.strip().lower()
     if re.match(r"^operator[\\s,:]", text) or "conference operator" in text or "all lines have been placed on mute" in text:
@@ -231,6 +240,7 @@ def score_chunk_for_summary(chunk_text: str) -> dict:
         "reason": f"{'Exec mentioned. ' if mentions_exec else ''}{match_count} strategy terms, {financial_weight} financial cues, {tone_weight} tone cues"
     }
 
+# Construct a summarization prompt given a list of chunk summaries
 def summarize_responses_prompt(chunks: List[str], section_type: str, company: str = "NVIDIA") -> str:
     prompt_header = {
         "management_sentiment": f"""You are given multiple sentiment evaluations from different sections of the MANAGEMENT portion of a quarterly earnings call for {company}.
@@ -275,10 +285,10 @@ def summarize_responses_prompt(chunks: List[str], section_type: str, company: st
             Responses:
             """
     }
-    
     body = "\n\n".join([f"{i+1}. {text.strip()}" for i, text in enumerate(chunks)])
     return prompt_header.get(section_type, "Responses:\n") + body
 
+# Generate a comparison between tone summaries of two quarters
 def compare_tone(summary1: str, summary2: str, company: str = "NVIDIA", quarter1: str = "Q1", quarter2: str = "Q2") -> str:
     prompt = f"""
         Compare the tone between these two quarterly earnings call excerpts for {company}.
@@ -290,7 +300,6 @@ def compare_tone(summary1: str, summary2: str, company: str = "NVIDIA", quarter1
         {quarter2}:
         {summary2}
     """
-
     cache_id = f"{quarter1}_vs_{quarter2}"
     path = _cache_path(prompt, company, cache_id, None, is_summary=2)
     result = _cached_or_call(prompt, path)

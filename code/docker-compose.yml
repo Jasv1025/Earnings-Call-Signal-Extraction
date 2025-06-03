@@ -1,18 +1,16 @@
 services:
   frontend:
-    build: ./
+    build: ./  # Build the frontend service from the root directory (Next.js app)
     ports:
-      - "3000:3000"
+      - "3000:3000"  # Expose the frontend on localhost:3000
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:5000  # Can also be http://backend:5000 for internal calls
+      - NEXT_PUBLIC_API_URL=http://localhost:5000  # Used by the frontend to talk to the backend (use http://backend:5000 if referencing by container name)
     depends_on:
-      - backend
+      - backend  # Ensure backend starts before frontend
 
   backend:
-    build: ./py_analysis
+    build: ./py_analysis  # Build the backend service from the py_analysis directory
     ports:
-      - "5000:5000"
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - "5000:5000"  # Expose the backend API on localhost:5000
     volumes:
-      - ./py_analysis:/app
+      - ./py_analysis:/app  # Mount local backend code into the container for live reload (dev use only)

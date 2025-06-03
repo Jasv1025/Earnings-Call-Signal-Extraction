@@ -5,9 +5,11 @@ from app.fool_scraper import scrape_transcript_from_url
 import json
 import time
 
+# Initialize Flask app and enable CORS for development
 app = Flask(__name__)
 CORS(app, origins=["http://localhost:3000"])
 
+# Static list of earnings call transcript URLs (Motley Fool)
 TRANSCRIPT_URLS = [
     "https://www.fool.com/earnings/call-transcripts/2025/02/26/nvidia-nvda-q4-2025-earnings-call-transcript/",
     "https://www.fool.com/earnings/call-transcripts/2024/11/20/nvidia-nvda-q3-2025-earnings-call-transcript/",
@@ -15,6 +17,7 @@ TRANSCRIPT_URLS = [
     "https://www.fool.com/earnings/call-transcripts/2024/05/29/nvidia-nvda-q1-2025-earnings-call-transcript/",
 ]
 
+# Run analysis on the latest four transcripts and package results
 def run_analyze_last_four(company="NVIDIA", provider="ollama"):
     raw_transcripts = [scrape_transcript_from_url(url) for url in TRANSCRIPT_URLS]
     results = []
@@ -40,6 +43,7 @@ def run_analyze_last_four(company="NVIDIA", provider="ollama"):
         })
     return results
 
+# Compute tone shift between adjacent quarters using cached summaries
 def run_tone_shift(company="NVIDIA", provider="ollama"):
     def parse_quarter(quarter_str):
         q, year = quarter_str.upper().split()
@@ -81,6 +85,7 @@ def run_tone_shift(company="NVIDIA", provider="ollama"):
         "comparisons": comparisons
     }
 
+# Route: root - returns both last-four analysis and tone shift
 @app.route("/", methods=["GET"])
 def analyze_all():
     print("[LOG] / route called")
@@ -93,6 +98,7 @@ def analyze_all():
         "tone_shift": tone_shift
     })
 
+# Route: /analyze/last-four - returns structured analysis for each quarter
 @app.route("/analyze/last-four", methods=["GET"])
 def analyze_last_four():
     print('[LOG] /analyze/last-four called')
@@ -104,12 +110,14 @@ def analyze_last_four():
         "results": last_four
     })
 
+# Route: /analyze/tone-shift - returns comparison summaries
 @app.route("/analyze/tone-shift", methods=["GET"])
 def analyze_tone_shift():
     company = request.args.get("company", "NVIDIA")
     provider = request.args.get("provider", "ollama")
     return jsonify(run_tone_shift(company, provider))
 
+# Route: /progress - returns JSON indicating current backend progress state
 @app.route("/progress", methods=["GET"])
 def progress():
     try:
@@ -120,6 +128,7 @@ def progress():
     except Exception as e:
         return jsonify({"status": f"Error: {str(e)}", "timestamp": time.time()})
 
+# Entry point: run Flask app with Waitress in production context
 if __name__ == "__main__":
     from waitress import serve
     print("[STARTUP] Waitress serving on port 5000...")
