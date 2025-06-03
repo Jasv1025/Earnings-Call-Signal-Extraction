@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-
+'''
 # Start Ollama in background
 ollama serve &
 echo "Ollama started..."
@@ -19,6 +19,9 @@ if ! curl -s http://localhost:11434/api/tags | grep -q "$MODEL"; then
 else
   echo "Model '$MODEL' already pulled."
 fi
+'''
+echo "Cache directory contents:"
+ls -l /app/cache_mistral
 
 # Ensure Python can resolve `app/` as a package
 export PYTHONPATH=/app

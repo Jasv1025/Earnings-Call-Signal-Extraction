@@ -23,7 +23,7 @@ COPY . .
 RUN chmod +x entrypoint.sh
 
 # Expose Flask + Ollama ports
-EXPOSE 5000 11434
+EXPOSE 5000
 
 # Entrypoint to run Ollama + Flask
 CMD ["./entrypoint.sh"]
