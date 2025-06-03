@@ -6,9 +6,6 @@ RUN apt-get update && \
     apt-get install -y curl unzip git && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Ollama CLI
-RUN curl -fsSL https://ollama.com/install.sh | bash
-
 # Set working directory inside container
 WORKDIR /app
 
