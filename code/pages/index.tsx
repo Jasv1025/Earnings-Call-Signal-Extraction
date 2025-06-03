@@ -27,10 +27,7 @@ type Analysis = {
 };
 
 // Determine backend API base URL depending on client environment
-const BASE_URL =
-  typeof window !== "undefined" && window.location.hostname === "localhost"
-    ? "http://localhost:5000"
-    : "http://backend:5000";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 export default function IndexPage(){
   // Holds full response data for the last four quarters
