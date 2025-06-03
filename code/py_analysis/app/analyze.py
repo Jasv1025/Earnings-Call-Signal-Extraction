@@ -46,26 +46,7 @@ def _cached_or_call(prompt: str, path: Path) -> str:
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)["content"]
-
-    update_progress("Calling Mistral via Ollama...")
-
-    response = requests.post(OLLAMA_URL, json={
-        "model": OLLAMA_MODEL,
-        "prompt": prompt,
-        "stream": False
-    })
-    response.raise_for_status()
-
-    try:
-        content = response.json().get("response") or response.json().get("message", {}).get("content") or ""
-    except Exception as e:
-        print("Failed to parse Ollama response:", e)
-        content = ""
-
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump({"content": content}, f, indent=2)
-
-    return content
+    raise RuntimeError(f"Missing cache file: {path.name}. Cannot generate without Ollama.")
 
 # Remove boilerplate ad segments and normalize spacing
 def preprocess_transcript(text: str) -> str:

@@ -15,7 +15,7 @@ done
 MODEL=${OLLAMA_MODEL:-mistral}
 if ! curl -s http://localhost:11434/api/tags | grep -q "$MODEL"; then
   echo "Pulling model: $MODEL"
-  ollama pull "$MODEL"
+  #ollama pull "$MODEL"
 else
   echo "Model '$MODEL' already pulled."
 fi
