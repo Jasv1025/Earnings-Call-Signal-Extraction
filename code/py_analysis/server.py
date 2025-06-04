@@ -131,7 +131,7 @@ def progress():
 # Entry point: run Flask app with Waitress in production context
 if __name__ == "__main__":
     from waitress import serve
-    print("[STARTUP] Waitress serving on port 5000...")
+    port = int(os.environ.get("PORT", 5000))
+    print(f"[STARTUP] Waitress serving on port {port}...")
     print("[STARTUP] Registered routes:")
-    print(app.url_map)
-    serve(app, host="0.0.0.0", port=5000)
+    serve(app, host="0.0.0.0", port=port)
