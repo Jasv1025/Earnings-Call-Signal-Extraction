@@ -27,7 +27,7 @@ type Analysis = {
 };
 
 // Determine backend API base URL depending on client environment
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = "https://nvidia-backend-ovos.onrender.com";
 
 export default function IndexPage(){
   // Holds full response data for the last four quarters
