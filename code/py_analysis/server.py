@@ -7,7 +7,7 @@ import time
 
 # Initialize Flask app and enable CORS for development
 app = Flask(__name__)
-CORS(app, origins=["https://nvidia-frontend-7ojt.onrender.com"])
+CORS(app, origins=["https://nvidia-frontend-7ojt.onrender.com", "http://localhost:3000"])
 
 # Static list of earnings call transcript URLs (Motley Fool)
 TRANSCRIPT_URLS = [
